@@ -159,13 +159,60 @@ void pgsql_save_msg(Msg *msg, Octstr *momt /*, Octstr smsbox_id */)
     octstr_destroy(sql);
 }
 
+/* save a list of messages and delete them from the insert table */
+void pgsql_save_list(List *qlist, Octstr *momt, int save_mt)
+{
+    Octstr *sql, *values, *ids, *sep;
+    Octstr *stuffer[30];
+    int stuffcount = 0, first = 1;
+    Msg *msg;
+
+    values = save_mt ? octstr_create("") : NULL;
+    ids = octstr_create("");
+    sep = octstr_imm("");
+    while (gwlist_len(qlist) > 0 && (msg = gwlist_consume(qlist)) != NULL) {
+        if (save_mt) {
+            /* convert into urlencoded text first */
+            octstr_url_encode(msg->sms.msgdata);
+            octstr_url_encode(msg->sms.udhdata);
+            octstr_format_append(values, "%S (NULL, %S, %S, %S, %S, %S, %S, %S, %S, %S, %S, %S, %S, %S, %S, %S, %S, %S, %S, %S, %S, %S, %S, %S, %S, %S, %S, %S)",
+                sep, st_str(momt), st_str(msg->sms.sender),
+                st_str(msg->sms.receiver), st_str(msg->sms.udhdata), st_str(msg->sms.msgdata), st_num(msg->sms.time),
+                st_str(msg->sms.smsc_id), st_str(msg->sms.service), st_str(msg->sms.account), st_num(msg->sms.sms_type),
+                st_num(msg->sms.mclass), st_num(msg->sms.mwi), st_num(msg->sms.coding), st_num(msg->sms.compress),
+                st_num(msg->sms.validity), st_num(msg->sms.deferred), st_num(msg->sms.dlr_mask), st_str(msg->sms.dlr_url),
+                st_num(msg->sms.pid), st_num(msg->sms.alt_dcs), st_num(msg->sms.rpi), st_str(msg->sms.charset),
+                st_str(msg->sms.boxc_id), st_str(msg->sms.binfo), st_str(msg->sms.meta_data), st_num(msg->sms.priority), st_str(msg->sms.foreign_id));
+        }
+        octstr_format_append(ids, "%S %S", sep, msg->sms.foreign_id);
+        msg_destroy(msg);
+        if (first) {
+            first = 0;
+            sep = octstr_imm(",");
+        }
+        while (stuffcount > 0) {
+            octstr_destroy(stuffer[--stuffcount]);
+        }
+    }
+    if (save_mt) {
+        sql = octstr_format(SQLBOX_PGSQL_INSERT_LIST_QUERY, sqlbox_logtable, values);
+        octstr_destroy(values);
+        sql_update(sql);
+        octstr_destroy(sql);
+    }
+    sql = octstr_format(SQLBOX_PGSQL_DELETE_LIST_QUERY, sqlbox_insert_table, ids);
+    octstr_destroy(ids);
+    sql_update(sql);
+    octstr_destroy(sql);
+}
+
 void pgsql_leave()
 {
     dbpool_destroy(pool);
 }
 
-#define octstr_null_create(x) (octstr_create(PQgetvalue(res, 0, x)))
-#define atol_null(x) ((PQgetisnull(res, 0, x) == 0) ? atol(PQgetvalue(res, 0, x)) : -1)
+#define octstr_null_create(r, x) (octstr_create(PQgetvalue(res, r, x)))
+#define atol_null(r, x) ((PQgetisnull(res, r, x) == 0) ? atol(PQgetvalue(res, r, x)) : -1)
 Msg *pgsql_fetch_msg()
 {
     Msg *msg = NULL;
@@ -182,41 +229,41 @@ Msg *pgsql_fetch_msg()
     }
     else {
         if (PQntuples(res) >= 1) {
-            id = octstr_null_create(0);
+          id = octstr_null_create(0, 0);
             /* save fields in this row as msg struct */
             msg = msg_create(sms);
             /* we abuse the foreign_id field in the message struct for our sql_id value */
-            msg->sms.foreign_id = octstr_null_create(0);
-            msg->sms.sender     = octstr_null_create(2);
-            msg->sms.receiver   = octstr_null_create(3);
-            msg->sms.udhdata    = octstr_null_create(4);
-            msg->sms.msgdata    = octstr_null_create(5);
-            msg->sms.time       = atol_null(6);
-            msg->sms.smsc_id    = octstr_null_create(7);
-            msg->sms.service    = octstr_null_create(8);
-            msg->sms.account    = octstr_null_create(9);
-            /* msg->sms.id      = atol_null(row[10]); */
-            msg->sms.sms_type   = atol_null(11);
-            msg->sms.mclass     = atol_null(12);
-            msg->sms.mwi        = atol_null(13);
-            msg->sms.coding     = atol_null(14);
-            msg->sms.compress   = atol_null(15);
-            msg->sms.validity   = atol_null(16);
-            msg->sms.deferred   = atol_null(17);
-            msg->sms.dlr_mask   = atol_null(18);
-            msg->sms.dlr_url    = octstr_null_create(19);
-            msg->sms.pid        = atol_null(20);
-            msg->sms.alt_dcs    = atol_null(21);
-            msg->sms.rpi        = atol_null(22);
-            msg->sms.charset    = octstr_null_create(23);
-            msg->sms.binfo      = octstr_null_create(25);
-            msg->sms.meta_data  = octstr_null_create(26);
-            msg->sms.priority   = atol_null(27);
+            msg->sms.foreign_id = octstr_null_create(0, 0);
+            msg->sms.sender     = octstr_null_create(0, 2);
+            msg->sms.receiver   = octstr_null_create(0, 3);
+            msg->sms.udhdata    = octstr_null_create(0, 4);
+            msg->sms.msgdata    = octstr_null_create(0, 5);
+            msg->sms.time       = atol_null(0, 6);
+            msg->sms.smsc_id    = octstr_null_create(0, 7);
+            msg->sms.service    = octstr_null_create(0, 8);
+            msg->sms.account    = octstr_null_create(0, 9);
+            /* msg->sms.id      = atol_null(0, row[10]); */
+            msg->sms.sms_type   = atol_null(0, 11);
+            msg->sms.mclass     = atol_null(0, 12);
+            msg->sms.mwi        = atol_null(0, 13);
+            msg->sms.coding     = atol_null(0, 14);
+            msg->sms.compress   = atol_null(0, 15);
+            msg->sms.validity   = atol_null(0, 16);
+            msg->sms.deferred   = atol_null(0, 17);
+            msg->sms.dlr_mask   = atol_null(0, 18);
+            msg->sms.dlr_url    = octstr_null_create(0, 19);
+            msg->sms.pid        = atol_null(0, 20);
+            msg->sms.alt_dcs    = atol_null(0, 21);
+            msg->sms.rpi        = atol_null(0, 22);
+            msg->sms.charset    = octstr_null_create(0, 23);
+            msg->sms.binfo      = octstr_null_create(0, 25);
+            msg->sms.meta_data  = octstr_null_create(0, 26);
+            msg->sms.priority   = atol_null(0, 27);
             if ((PQgetvalue(res, 0, 24)) == NULL) {
                 msg->sms.boxc_id= octstr_duplicate(sqlbox_id);
             }
             else {
-                msg->sms.boxc_id= octstr_null_create(24);
+              msg->sms.boxc_id= octstr_null_create(0, 24);
             }
             /* delete current row */
             delet = octstr_format(SQLBOX_PGSQL_DELETE_QUERY, sqlbox_insert_table, id);
@@ -232,6 +279,69 @@ Msg *pgsql_fetch_msg()
     octstr_destroy(sql);
         //debug("sqlbox", 0, "sql_fetch_msg: %s", octstr_get_cstr(sql));
     return msg;
+}
+
+int pgsql_fetch_msg_list(List *qlist, long limit)
+{
+    Msg *msg = NULL;
+    Octstr *sql, *delet, *id;
+    PGresult *res;
+    int ret = 0;
+
+    sql = octstr_format(SQLBOX_PGSQL_SELECT_LIST_QUERY, sqlbox_insert_table, limit);
+    res = pgsql_select(sql);
+#if defined(SQLBOX_TRACE)
+     debug("SQLBOX", 0, "sql: %s", octstr_get_cstr(sql));
+#endif
+    if (res == NULL) {
+        debug("sqlbox", 0, "SQL statement failed: %s", octstr_get_cstr(sql));
+    }
+    else {
+      ret = PQntuples(res);
+      for (int i=0; i < ret; i++) {
+        id = octstr_null_create(i, 0);
+        /* save fields in this row as msg struct */
+        msg = msg_create(sms);
+        /* we abuse the foreign_id field in the message struct for our sql_id value */
+        msg->sms.foreign_id = octstr_null_create(i, 0);
+        msg->sms.sender     = octstr_null_create(i, 2);
+        msg->sms.receiver   = octstr_null_create(i, 3);
+        msg->sms.udhdata    = octstr_null_create(i, 4);
+        msg->sms.msgdata    = octstr_null_create(i, 5);
+        msg->sms.time       = atol_null(i, 6);
+        msg->sms.smsc_id    = octstr_null_create(i, 7);
+        msg->sms.service    = octstr_null_create(i, 8);
+        msg->sms.account    = octstr_null_create(i, 9);
+        /* msg->sms.id      = atol_null(i, row[10]); */
+        msg->sms.sms_type   = atol_null(i, 11);
+        msg->sms.mclass     = atol_null(i, 12);
+        msg->sms.mwi        = atol_null(i, 13);
+        msg->sms.coding     = atol_null(i, 14);
+        msg->sms.compress   = atol_null(i, 15);
+        msg->sms.validity   = atol_null(i, 16);
+        msg->sms.deferred   = atol_null(i, 17);
+        msg->sms.dlr_mask   = atol_null(i, 18);
+        msg->sms.dlr_url    = octstr_null_create(i, 19);
+        msg->sms.pid        = atol_null(i, 20);
+        msg->sms.alt_dcs    = atol_null(i, 21);
+        msg->sms.rpi        = atol_null(i, 22);
+        msg->sms.charset    = octstr_null_create(i, 23);
+        msg->sms.binfo      = octstr_null_create(i, 25);
+        msg->sms.meta_data  = octstr_null_create(i, 26);
+        msg->sms.priority   = atol_null(i, 27);
+        if ((PQgetvalue(res, i, 24)) == NULL) {
+          msg->sms.boxc_id= octstr_duplicate(sqlbox_id);
+        }
+        else {
+          msg->sms.boxc_id= octstr_null_create(i, 24);
+        }
+        gwlist_produce(qlist, msg);
+      }
+      PQclear(res);
+    }
+    octstr_destroy(sql);
+        //debug("sqlbox", 0, "sql_fetch_msg: %s", octstr_get_cstr(sql));
+    return ret;
 }
 
 struct server_type *sqlbox_init_pgsql(Cfg* cfg)
@@ -327,8 +437,8 @@ found:
     res->sql_leave = pgsql_leave;
     res->sql_fetch_msg = pgsql_fetch_msg;
     res->sql_save_msg = pgsql_save_msg;
-    res->sql_fetch_msg_list = NULL;
-    res->sql_save_list = NULL;
+    res->sql_fetch_msg_list = pgsql_fetch_msg_list;
+    res->sql_save_list = pgsql_save_list;
     return res;
 }
 

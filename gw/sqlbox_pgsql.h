@@ -28,12 +28,23 @@ boxc_id VARCHAR(255) NULL, binfo VARCHAR(255) NULL, meta_data TEXT NULL, priorit
 time, smsc_id, service, account, id, sms_type, mclass, mwi, coding, compress, validity, deferred, \
 dlr_mask, dlr_url, pid, alt_dcs, rpi, charset, boxc_id, binfo, meta_data, priority FROM %S LIMIT 1 OFFSET 0"
 
+#define SQLBOX_PGSQL_SELECT_LIST_QUERY "SELECT sql_id, momt, sender, receiver, udhdata, \
+msgdata, time, smsc_id, service, account, id, sms_type, mclass, mwi, coding, \
+compress, validity, deferred, dlr_mask, dlr_url, pid, alt_dcs, rpi, \
+charset, boxc_id, binfo, meta_data, priority FROM %S LIMIT %ld OFFSET 0"
+
+#define SQLBOX_PGSQL_INSERT_LIST_QUERY "INSERT INTO %S ( sql_id, momt, sender, \
+receiver, udhdata, msgdata, time, smsc_id, service, account, sms_type, \
+mclass, mwi, coding, compress, validity, deferred, dlr_mask, dlr_url, \
+pid, alt_dcs, rpi, charset, boxc_id, binfo, meta_data, priority, foreign_id ) VALUES %S"
+
 #define SQLBOX_PGSQL_INSERT_QUERY "INSERT INTO %S (momt, sender, receiver, udhdata, msgdata, \
 time, smsc_id, service, account, sms_type, mclass, mwi, coding, compress, validity, deferred, \
 dlr_mask, dlr_url, pid, alt_dcs, rpi, charset, boxc_id, binfo, meta_data, priority, foreign_id) VALUES (%S, %S, %S, \
 %S, %S, %S, %S, %S, %S, %S, %S, %S, %S, %S, %S, %S, %S, %S, %S, %S, %S, %S, %S, %S, %S, %S, %S)"
 
 #define SQLBOX_PGSQL_DELETE_QUERY "DELETE FROM %S WHERE sql_id = %S"
+#define SQLBOX_PGSQL_DELETE_LIST_QUERY "DELETE FROM %S WHERE sql_id in (%S)"
 
 #endif /* HAVE_PGSQL || HAVE_SDB */
 
