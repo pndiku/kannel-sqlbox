@@ -175,7 +175,7 @@ void pgsql_save_list(List *qlist, Octstr *momt, int save_mt)
             /* convert into urlencoded text first */
             octstr_url_encode(msg->sms.msgdata);
             octstr_url_encode(msg->sms.udhdata);
-            octstr_format_append(values, "%S (NULL, %S, %S, %S, %S, %S, %S, %S, %S, %S, %S, %S, %S, %S, %S, %S, %S, %S, %S, %S, %S, %S, %S, %S, %S, %S, %S, %S)",
+            octstr_format_append(values, "%S (%S, %S, %S, %S, %S, %S, %S, %S, %S, %S, %S, %S, %S, %S, %S, %S, %S, %S, %S, %S, %S, %S, %S, %S, %S, %S, %S)",
                 sep, st_str(momt), st_str(msg->sms.sender),
                 st_str(msg->sms.receiver), st_str(msg->sms.udhdata), st_str(msg->sms.msgdata), st_num(msg->sms.time),
                 st_str(msg->sms.smsc_id), st_str(msg->sms.service), st_str(msg->sms.account), st_num(msg->sms.sms_type),

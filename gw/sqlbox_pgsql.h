@@ -33,7 +33,7 @@ msgdata, time, smsc_id, service, account, id, sms_type, mclass, mwi, coding, \
 compress, validity, deferred, dlr_mask, dlr_url, pid, alt_dcs, rpi, \
 charset, boxc_id, binfo, meta_data, priority FROM %S LIMIT %ld OFFSET 0"
 
-#define SQLBOX_PGSQL_INSERT_LIST_QUERY "INSERT INTO %S ( sql_id, momt, sender, \
+#define SQLBOX_PGSQL_INSERT_LIST_QUERY "INSERT INTO %S ( momt, sender, \
 receiver, udhdata, msgdata, time, smsc_id, service, account, sms_type, \
 mclass, mwi, coding, compress, validity, deferred, dlr_mask, dlr_url, \
 pid, alt_dcs, rpi, charset, boxc_id, binfo, meta_data, priority, foreign_id ) VALUES %S"
